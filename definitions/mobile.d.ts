@@ -234,11 +234,36 @@ declare module Mobile {
 		skin?: string;
 		sdcard?: string;
 	}
+	
+	const enum EmulatorType {
+		Genymotion,
+		Native
+	}
+
+	const enum OperatingSystem {
+		Android,
+		iOS,
+		WP8
+	}
+
+	interface IEmulatorDevice {
+		name: string,
+		platform: OperatingSystem,
+		deviceType: string,
+		targetSDK: string
+	}
+
+	interface IAndroidEmulatorDevice extends IEmulatorDevice {
+		type: EmulatorType,
+		adbDisplayName: string,
+		avdInfo: IAvdInfo
+	}
 
 	interface IEmulatorPlatformServices {
 		checkDependencies(): IFuture<void>;
 		checkAvailability(dependsOnProject?: boolean): IFuture<void>;
 		startEmulator(app: string, emulatorOptions?: IEmulatorOptions): IFuture<void>;
+		getRunningEmulators(type?: EmulatorType): IFuture<IEmulatorDevice[]>;
 	}
 
 	interface IiOSSimulatorService extends IEmulatorPlatformServices {

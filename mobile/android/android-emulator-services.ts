@@ -11,11 +11,13 @@ import util = require("util");
 import helpers = require("../../helpers");
 let net = require('net');
 
+
 class VirtualMachine {
 	constructor(public name: string, public identifier: string) { }
 }
 
 class AndroidEmulatorServices implements Mobile.IEmulatorPlatformServices {
+	private static CURRENT_SDK_BETA_VERSION = "MNC";
 	private static ANDROID_DIR_NAME = ".android";
 	private static AVD_DIR_NAME = "avd";
 	private static INI_FILES_MASK = /^(.*)\.ini$/i;
@@ -79,6 +81,7 @@ class AndroidEmulatorServices implements Mobile.IEmulatorPlatformServices {
 			}
 
 			let image = this.$options.avd || this.$options.geny || this.getBestFit().wait();
+			this.$logger.trace(`Selected image is ${image}`);
 			if(image) {
 				this.startEmulatorCore(app, emulatorOptions.appId, image).wait();
 			} else {
@@ -86,7 +89,7 @@ class AndroidEmulatorServices implements Mobile.IEmulatorPlatformServices {
 			}
 		}).future<void>()();
 	}
-
+	
 	private startEmulatorCore(app: string, appId: string, image: string): IFuture<void> {
 		return (() => {
 			// start the emulator, if needed
@@ -144,7 +147,6 @@ class AndroidEmulatorServices implements Mobile.IEmulatorPlatformServices {
 		return timeout * 1000;
 	}
 
-
 	private getRunningEmulatorId(image: string): IFuture<string> {
 		return ((): string => {
 			let runningEmulators = this.getRunningEmulators().wait();
@@ -152,11 +154,8 @@ class AndroidEmulatorServices implements Mobile.IEmulatorPlatformServices {
 				return "";
 			}
 
-			// if we get here, there's at least one running emulator
-			let getNameFunction = this.$options.geny ? this.getNameFromGenymotionEmulatorId : this.getNameFromSDKEmulatorId;
-			let emulatorId = _(runningEmulators).find(emulator => getNameFunction.apply(this, [emulator]).wait() === image);
-
-			return emulatorId;
+			let device = _.find(runningEmulators, (emulator: Mobile.IAndroidEmulatorDevice) => emulator.name.toLowerCase() === image.toLowerCase());
+			return device ? device.adbDisplayName : undefined;
 		}).future<string>()();
 	}
 
@@ -169,6 +168,11 @@ class AndroidEmulatorServices implements Mobile.IEmulatorPlatformServices {
 		}).future<string>()();
 	}
 
+	/**
+	 * Get Native emualtor's image name.
+	 * The name returned by '$ adb -s emulator-5554 shell getprop ro.product.model' is something like 'Android SDK built for x86'
+	 * while the real name of the image can be taken by asking the device for its name. 
+	 */
 	private getNameFromSDKEmulatorId(emulatorId: string): IFuture<string> {
 		let match = emulatorId.match(/^emulator-(\d+)/);
 		let portNumber: string;
@@ -254,28 +258,58 @@ class AndroidEmulatorServices implements Mobile.IEmulatorPlatformServices {
 		}).future<string>()();
 	}
 
-	private getRunningGenymotionEmulators(adbDevicesOutput: string[]): IFuture<string[]> {
-		return ((): string[]=> {
-			let futures = _(adbDevicesOutput).filter(r => !r.match(AndroidEmulatorServices.RUNNING_ANDROID_EMULATOR_REGEX))
-				.map(row => {
-					let match = row.match(/^(.+?)\s+device$/);
-					if(match && match[1]) {
-						// possible genymotion emulator 
-						let emulatorId = match[1];
-						return this.checkForGenymotionProductManufacturer(emulatorId);
-					}
-
-					return Future.fromResult(undefined);
-				}).value();
+	private getRunningGenymotionEmulators(adbDevicesOutput: string[]): IFuture<Mobile.IAndroidEmulatorDevice[]> {
+		return ((): Mobile.IAndroidEmulatorDevice[]=> {
+			let futures = _(adbDevicesOutput)
+						.filter(r => !r.match(AndroidEmulatorServices.RUNNING_ANDROID_EMULATOR_REGEX))
+						.map(row => {
+							let match = row.match(/^(.+?)\s+device$/);
+							if(match && match[1]) {
+								// possible genymotion emulator 
+								let emulatorId = match[1];
+								return this.checkForGenymotionProductManufacturer(emulatorId);
+							}
+		
+							return Future.fromResult(undefined);
+						})
+						.value();
 
 			Future.wait(futures);
 
 			return _(futures).filter(future => !!future.get())
-				.map(f => f.get().toString())
+				.map(f => this.getInformationForGenymotionEmulatorByName(f.get().toString()).wait())
 				.value();
-		}).future<string[]>()();
+		}).future<Mobile.IAndroidEmulatorDevice[]>()();
 	}
-
+	
+	private getInformationForGenymotionEmulatorByName(adbDisplayName: string): IFuture<Mobile.IAndroidEmulatorDevice> {
+		return ((): Mobile.IAndroidEmulatorDevice => {
+			let genymotionEmulator: Mobile.IAndroidEmulatorDevice = <any> {};
+			genymotionEmulator.adbDisplayName = adbDisplayName;
+			genymotionEmulator.platform = Mobile.OperatingSystem.Android;
+			genymotionEmulator.name = this.getNameFromGenymotionEmulatorId(adbDisplayName).wait();
+			genymotionEmulator.targetSDK = this.getRunningDeviceSDK(adbDisplayName).wait();
+			genymotionEmulator.type = Mobile.EmulatorType.Genymotion;
+			// TODO: Make sure to get all available information about Genymotion item.
+			return genymotionEmulator;
+		}).future<Mobile.IAndroidEmulatorDevice>()();
+		
+	}
+	
+	private getInformationForNativeEmulatorByName(adbDisplayName: string): IFuture<Mobile.IAndroidEmulatorDevice> {
+		return ((): Mobile.IAndroidEmulatorDevice => {
+			let nativeEmulator: Mobile.IAndroidEmulatorDevice = <any> {};
+			nativeEmulator.adbDisplayName = adbDisplayName;
+			nativeEmulator.platform = Mobile.OperatingSystem.Android;
+			nativeEmulator.name = this.getNameFromSDKEmulatorId(adbDisplayName).wait();
+			nativeEmulator.targetSDK = this.getRunningDeviceSDK(adbDisplayName).wait();
+			nativeEmulator.type = Mobile.EmulatorType.Native;
+			// TODO: Make sure to get all available information about Genymotion item.
+			return nativeEmulator;
+		}).future<Mobile.IAndroidEmulatorDevice>()();
+		
+	}
+	
 	private checkForGenymotionProductManufacturer(emulatorId: string): IFuture<string> {
 		return ((): string => {
 			let manufacturer = this.$childProcess.execFile(this.adbFilePath, ["-s", emulatorId, "shell", "getprop", "ro.product.manufacturer"]).wait();
@@ -286,35 +320,59 @@ class AndroidEmulatorServices implements Mobile.IEmulatorPlatformServices {
 			return undefined;
 		}).future<string>()();
 	}
-
-	private getRunningEmulators(): IFuture<string[]> {
+	
+	private getRunningDeviceSDK(emulatorId: string): IFuture<string> {
 		return (() => {
+			let modelOutputLines: string = this.$childProcess.execFile(this.adbFilePath, ["-s", emulatorId, "shell", "getprop", "ro.build.version.sdk"]).wait();
+			this.$logger.trace(modelOutputLines);
+			let model = (<string>_.first(modelOutputLines.split(os.EOL))).trim();
+			return model;
+		}).future<string>()();
+	}
 
-			let emulatorDevices: string[] = [];
+	public getRunningEmulators(type?: Mobile.EmulatorType): IFuture<Mobile.IAndroidEmulatorDevice[]> {
+		return ((): Mobile.IAndroidEmulatorDevice[] => {
+			let emulatorDevices: Mobile.IAndroidEmulatorDevice[] = [];
 			let outputRaw: string[] = this.$childProcess.execFile(this.adbFilePath, ['devices']).wait().split(os.EOL);
-			if(this.$options.geny) {
+			// if(this.$options.geny) {
 				emulatorDevices = this.getRunningGenymotionEmulators(outputRaw).wait();
-			} else {
+			// } else {
 				_.each(outputRaw, (device: string) => {
 					let rx = device.match(AndroidEmulatorServices.RUNNING_ANDROID_EMULATOR_REGEX);
 
 					if(rx && rx[1]) {
-						emulatorDevices.push(rx[1]);
+						emulatorDevices.push(this.getInformationForNativeEmulatorByName(rx[1]).wait());
 					}
 				});
-			}
+			// }
+			console.log(">>>>>>>>>>>>>>>>>>>>>>>>>");
+			console.log(emulatorDevices);
 			return emulatorDevices;
-		}).future<string[]>()();
+		}).future<Mobile.IAndroidEmulatorDevice[]>()();
 	}
 
 	private getBestFit(): IFuture<string> {
 		return (() => {
 			let minVersion = this.$emulatorSettingsService.minVersion;
 
+			// if there's running android emulators, check them first and see which one fits best
+			let bestFitRunningEmulator = _(this.getRunningEmulators().wait())
+					.filter((emulator: Mobile.IAndroidEmulatorDevice) => {
+						let targetSDK = parseInt(emulator.targetSDK);
+						// Consider API Levels with letters (L, MNC) as available for current target
+						return emulator.targetSDK === AndroidEmulatorServices.CURRENT_SDK_BETA_VERSION || (targetSDK && targetSDK >= minVersion);
+					})
+					.sortBy(a => a.targetSDK)
+					.findLast(a => true); // because last is not chainable
+
+			if(bestFitRunningEmulator) {
+				return bestFitRunningEmulator.name;
+			}
+
 			let best = _(this.getAvds().wait())
 				.map(avd => this.getInfoFromAvd(avd).wait())
 				.max(avd => avd.targetNum);
-
+			
 			return (best.targetNum >= minVersion) ? best.name : null;
 		}).future<string>()();
 	}

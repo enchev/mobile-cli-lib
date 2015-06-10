@@ -3,6 +3,7 @@
 
 import path = require("path");
 import hostInfo = require("../../host-info");
+import Future = require("fibers/future");
 
 class Wp8EmulatorServices implements Mobile.IEmulatorPlatformServices {
 	constructor(private $logger: ILogger,
@@ -38,6 +39,9 @@ class Wp8EmulatorServices implements Mobile.IEmulatorPlatformServices {
 		}).future<void>()();
 	}
 
+	public getRunningEmulators(type?: Mobile.EmulatorType): IFuture<Mobile.IEmulatorDevice[]> {
+		return Future.fromResult(null);
+	}
 	private static get programFilesPath(): string {
 		return (process.arch === "x64") ? process.env["PROGRAMFILES(X86)"] : process.env.ProgramFiles;
 	}
