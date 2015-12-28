@@ -23,7 +23,8 @@ export class DevicesService implements Mobile.IDevicesService {
 		private $androidDeviceDiscovery: Mobile.IDeviceDiscovery,
 		private $staticConfig: Config.IStaticConfig,
 		private $messages: IMessages,
-		private $mobileHelper: Mobile.IMobileHelper) {
+		private $mobileHelper: Mobile.IMobileHelper,
+		private $deviceLogProvider: Mobile.IDeviceLogProvider) {
 		this.attachToDeviceDiscoveryEvents();
 	}
 
@@ -38,6 +39,11 @@ export class DevicesService implements Mobile.IDevicesService {
 	@exported("devicesService")
 	public getDevices(): Mobile.IDeviceInfo[] {
 		return this.getDeviceInstances().map(deviceInstance => deviceInstance.deviceInfo);
+	}
+
+	@exported("devicesService")
+	private setLogLevel(logLevel: string, deviceIdentifier?: string): void {
+		this.$deviceLogProvider.setLogLevel(logLevel, deviceIdentifier);
 	}
 
 	public getDeviceInstances(): Mobile.IDevice[] {
