@@ -134,7 +134,7 @@ export class UsbLiveSyncServiceBase implements IUsbLiveSyncServiceBase {
 			}
 
 			if(this.$options.watch) {
-
+				console.log("IN WATCH!!!");
 				let that = this;
 				this.$hooksService.executeBeforeHooks('watch').wait();
 
@@ -255,6 +255,7 @@ export class UsbLiveSyncServiceBase implements IUsbLiveSyncServiceBase {
 
 	private syncCore(data: ILiveSyncData, projectFiles: string[], batchLiveSync: boolean): IFuture<void> {
 		return (() => {
+			console.log("SYNC CORE CALLED");
 			let projectFilesPath = data.localProjectRootPath || data.projectFilesPath;
 			let platform = data.platform ? this.$mobileHelper.normalizePlatformName(data.platform) : this.$devicesService.platform;
 			let deviceAppData =  this.$deviceAppDataFactory.create(data.appIdentifier, this.$mobileHelper.normalizePlatformName(platform));
@@ -262,6 +263,7 @@ export class UsbLiveSyncServiceBase implements IUsbLiveSyncServiceBase {
 
 			let action = (device: Mobile.IDevice) => {
 				return (() => {
+					console.log("actionnnnnnnnnnnn started for device with id " + device.deviceInfo.identifier);
 					if (deviceAppData.isLiveSyncSupported(device).wait()) {
 						this.$logger.info(`Start syncing application ${deviceAppData.appIdentifier} at ${moment().format("ll LTS")}.`);
 
