@@ -276,6 +276,20 @@ export function connectEventually(factory: () => net.Socket, handler: (_socket: 
 	tryConnect();
 }
 
+export function convertToDictionary(arr: string[]): IStringDictionary {
+	let dictionary: IStringDictionary = Object.create(null);
+	_.each(arr, item => {
+		let [key, value] = item.split(" ");
+		dictionary[key] = value;
+	});
+
+	return dictionary;
+}
+
+export function convertToString(dictionary: IStringDictionary): string {
+	 return _.keys(dictionary).map(key => `${key} ${dictionary[key]}`).join("\n");
+}
+
 //--- begin part copied from AngularJS
 
 //The MIT License

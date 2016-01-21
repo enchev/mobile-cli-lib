@@ -493,4 +493,11 @@ declare module Mobile {
 	interface IiOSDeviceProductNameMapper {
 		resolveProductName(deviceType: string): string;
 	}
+
+	interface IAndroidDeviceHashService {
+		hashFileDevicePath: string;
+		getShasumsFromDevice(): IFuture<string[]>;
+		uploadHashFileToDevice(shasums: string): IFuture<void>;
+		uploadHashFileToDevice(localToDevicePaths: Mobile.ILocalToDevicePathData[]): IFuture<void>;
+	}
 }
