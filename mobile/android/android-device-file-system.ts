@@ -5,7 +5,6 @@ import * as path from "path";
 import * as temp from "temp";
 import {AndroidDeviceHashService} from "./android-device-hash-service";
 import Future = require("fibers/future");
-import * as helpers from "../../helpers";
 
 export class AndroidDeviceFileSystem implements Mobile.IDeviceFileSystem {
 	private _deviceHashServices = Object.create(null);
@@ -46,14 +45,9 @@ export class AndroidDeviceFileSystem implements Mobile.IDeviceFileSystem {
 				)
 				.value();
 
-			// Update hashes of changed or added files
+			// Update hashes
 			let deviceHashService = this.getDeviceHashService(deviceAppData.appIdentifier);
-			let oldShasums = deviceHashService.getShasumsFromDevice().wait();
-			if (oldShasums) {
-				let fileToShasumDictionary = helpers.convertToDictionary(oldShasums);
-				_.each(localToDevicePaths, ldp => fileToShasumDictionary[ldp.getLocalPath()] = this.$fs.getFileShasum(ldp.getLocalPath()).wait());
-				deviceHashService.uploadHashFileToDevice(helpers.convertToString(fileToShasumDictionary)).wait();
-			} else {
+			if (!deviceHashService.updateHashes(localToDevicePaths).wait()) {
 				this.$logger.trace("Unable to find hash file on device. The next livesync command will create it.");
 			}
 		}).future<void>()();

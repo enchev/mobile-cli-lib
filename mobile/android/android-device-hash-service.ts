@@ -1,6 +1,7 @@
 ///<reference path="../../.d.ts"/>
 "use strict";
 
+import * as helpers from "../../helpers";
 import * as path from "path";
 import * as temp from "temp";
 
@@ -52,6 +53,34 @@ export class AndroidDeviceHashService {
 			this.$fs.writeFile(this.hashFileLocalPath, shasums).wait();
 			this.adb.executeCommand(["push", this.hashFileLocalPath, this.hashFileDevicePath]).wait();
 		}).future<void>()();
+	}
+
+	public updateHashes(localToDevicePaths: Mobile.ILocalToDevicePathData[]): IFuture<boolean> {
+		return (() => {
+			let oldShasums = this.getShasumsFromDevice().wait();
+			if (oldShasums) {
+				let fileToShasumDictionary = helpers.convertToDictionary(oldShasums);
+				_.each(localToDevicePaths, ldp => fileToShasumDictionary[ldp.getLocalPath()] = this.$fs.getFileShasum(ldp.getLocalPath()).wait());
+				this.uploadHashFileToDevice(helpers.convertToString(fileToShasumDictionary)).wait();
+				return true;
+			}
+
+			return false;
+		}).future<boolean>()();
+	}
+
+	public removeHashes(localToDevicePaths: Mobile.ILocalToDevicePathData[]): IFuture<boolean> {
+		return (() => {
+			let oldShasums = this.getShasumsFromDevice().wait();
+			if (oldShasums) {
+				let fileToShasumDictionary = helpers.convertToDictionary(oldShasums);
+				fileToShasumDictionary = <any>(_.omit(fileToShasumDictionary, localToDevicePaths.map(ldp => ldp.getLocalPath())));
+				this.uploadHashFileToDevice(helpers.convertToString(fileToShasumDictionary)).wait();
+				return true;
+			}
+
+			return false;
+		}).future<boolean>()();
 	}
 
 	private get hashFileLocalPath(): string {

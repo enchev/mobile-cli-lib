@@ -495,9 +495,30 @@ declare module Mobile {
 	}
 
 	interface IAndroidDeviceHashService {
+		/**
+		 * Returns the hash file path on device
+		 */
 		hashFileDevicePath: string;
+		/**
+		 * If hash file exists on device, read the hashes from the file and returns them as array
+		 * If hash file doesn't exist on device, returns null
+		 */
 		getShasumsFromDevice(): IFuture<string[]>;
+		/**
+		 * Changes the content of hash file on device with the given shasums
+		 */
 		uploadHashFileToDevice(shasums: string): IFuture<void>;
+		/**
+		 * Computes the shasums of localToDevicePaths and changes the content of hash file on device
+		 */
 		uploadHashFileToDevice(localToDevicePaths: Mobile.ILocalToDevicePathData[]): IFuture<void>;
+		/**
+		 * Computes the shasums of localToDevicePaths and updates hash file on device
+		 */
+		updateHashes(localToDevicePaths: Mobile.ILocalToDevicePathData[]): IFuture<boolean>;
+		/**
+		 * Computes the shasums of localToDevicePaths and removes them from hash file on device
+		 */
+		removeHashes(localToDevicePaths: Mobile.ILocalToDevicePathData[]): IFuture<void>;
 	}
 }
