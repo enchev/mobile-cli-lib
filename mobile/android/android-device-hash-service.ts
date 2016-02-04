@@ -26,11 +26,22 @@ export class AndroidDeviceHashService {
 		return this._hashFileDevicePath;
 	}
 
+	public doesShasumFileExistsOnDevice(): IFuture<boolean> {
+		return ((): boolean => {
+			let lsResult = this.adb.executeShellCommand(["ls", this.hashFileDevicePath]).wait();
+			return !!(lsResult && lsResult.trim() === this.hashFileDevicePath);
+		}).future<boolean>()();
+	}
+
 	public getShasumsFromDevice(): IFuture<string[]> {
 		return (() => {
 			let hashFileLocalPath = this.downloadHashFileFromDevice().wait();
+
 			if (this.$fs.exists(hashFileLocalPath).wait()) {
-				return this.$fs.readText(hashFileLocalPath).wait().split("\n");
+				let stats = this.$fs.getFsStats(hashFileLocalPath).wait();
+				if (stats.isFile()) {
+					return this.$fs.readText(hashFileLocalPath).wait().split("\n");
+				}
 			}
 
 			return null;
@@ -45,9 +56,13 @@ export class AndroidDeviceHashService {
 			} else { // data type is Mobile.ILocalToDevicePathData[]
 				shasums = data.map( (localToDevicePathData: Mobile.ILocalToDevicePathData) => {
 					let localPath = localToDevicePathData.getLocalPath();
-					let fileShasum = this.$fs.getFileShasum(localPath).wait();
-					return `${localPath} ${fileShasum}`;
-				}).join("\n");
+					let stats = this.$fs.getFsStats(localPath).wait();
+					if (stats.isFile()) {
+						let fileShasum = this.$fs.getFileShasum(localPath).wait();
+						return `${localPath} ${fileShasum}`;
+					}
+					return null;
+				}).filter((a: string) => !!a).join("\n");
 			}
 
 			this.$fs.writeFile(this.hashFileLocalPath, shasums).wait();

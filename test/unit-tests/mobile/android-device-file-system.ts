@@ -104,6 +104,11 @@ describe("Android device file system tests", () => {
 			let fs = injector.resolve("fs");
 			fs.getFileShasum = (filePath: string) => (() => fileToShasumDictionary[filePath]).future<string>()();
 			fs.exists = (filePath: string) => Future.fromResult(false);
+			fs.exists = (filePath: string) => Future.fromResult(false);
+			fs.getFsStats = (filePath: string) => Future.fromResult({
+				isDirectory: () => false,
+				isFile: () => true
+			});
 
 			let androidDeviceFileSystem = createAndroidDeviceFileSystem(injector);
 			androidDeviceFileSystem.transferDirectory(deviceAppData, localToDevicePaths, "~/TestApp/app").wait();
@@ -140,6 +145,10 @@ describe("Android device file system tests", () => {
 			fs.getFileShasum = (filePath: string) => (() => fileToShasumDictionary[filePath]).future<string>()();
 			fs.exists = (filePath: string) => Future.fromResult(true);
 			fs.readText = (filePath: string) => (() =>  "~/TestApp/app/test.js 0\n ~/TestApp/app/myfile.js 2").future<string>()();
+			fs.getFsStats = (filePath: string) => Future.fromResult({
+				isDirectory: () => false,
+				isFile: () => true
+			});
 
 			let androidDeviceFileSystem = createAndroidDeviceFileSystem(injector);
 			androidDeviceFileSystem.transferFile = (localPath: string, devicePath: string) => {
@@ -163,6 +172,10 @@ describe("Android device file system tests", () => {
 			fs.getFileShasum = (filePath: string) => (() => fileToShasumDictionary[filePath]).future<string>()();
 			fs.exists = (filePath: string) => Future.fromResult(true);
 			fs.readText = (filePath: string) => (() =>  "~/TestApp/app/test.js 0\n ~/TestApp/app/myfile.js 4\n ~/TestApp/app/notchangedFile.js 3").future<string>()();
+			fs.getFsStats = (filePath: string) => Future.fromResult({
+				isDirectory: () => false,
+				isFile: () => true
+			});
 
 			let androidDeviceFileSystem = createAndroidDeviceFileSystem(injector);
 			let transferedFilesOnDevice: string[] = [];
