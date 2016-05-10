@@ -6,7 +6,7 @@ import Future = require("fibers/future");
 import * as querystring from "querystring";
 import * as path from "path";
 import * as util from "util";
-import { LiveSyncConstants } from "../../mobile/constants";
+import { LiveSyncConstants } from "../../constants";
 
 export class AndroidAppIdentifier extends DeviceAppDataBase implements ILiveSyncDeviceAppData {
 	private _deviceProjectRootPath: string = null;

@@ -4,7 +4,7 @@
 import * as androidDebugBridgePath from "./android-debug-bridge";
 import * as applicationManagerPath from "./android-application-manager";
 import * as fileSystemPath from "./android-device-file-system";
-import * as constants from "../constants";
+import * as constants from "../../constants";
 
 interface IAndroidDeviceDetails {
 	model: string;

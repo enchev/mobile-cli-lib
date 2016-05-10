@@ -5,7 +5,7 @@ import iOSProxyServices = require("../../../mobile/ios/device/ios-proxy-services
 import * as path from "path";
 import * as shell from "shelljs";
 let osenv = require("osenv");
-import { LiveSyncConstants } from "../../../mobile/constants";
+import { LiveSyncConstants } from "../../../constants";
 
 export class IOSLiveSyncService implements IPlatformLiveSyncService {
 	private get $project(): any {

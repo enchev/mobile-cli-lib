@@ -2,7 +2,7 @@
 "use strict";
 import {EOL} from "os";
 import {ApplicationManagerBase} from "../application-manager-base";
-import { LiveSyncConstants } from "../../mobile/constants";
+import { LiveSyncConstants } from "../../constants";
 
 export class AndroidApplicationManager extends ApplicationManagerBase {
 

@@ -9,7 +9,7 @@ import {CoreTypes, PlistService} from "./ios-core";
 import * as iOSProxyServices from "./ios-proxy-services";
 import * as applicationManagerPath from "./ios-application-manager";
 import * as fileSystemPath from "./ios-device-file-system";
-import * as constants from "../../constants";
+import * as constants from "../../../constants";
 
 export class IOSDevice implements Mobile.IiOSDevice {
 	// iOS errors are described here with HEX representation

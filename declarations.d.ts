@@ -643,6 +643,11 @@ interface ICommonOptions {
 	options: IDictionary<any>;
 	shorthands: string[];
 
+
+	/**
+	 * Project Configuration
+	 */
+	config: string[];
 	log: string;
 	verbose: boolean;
 	path: string;
@@ -678,6 +683,7 @@ interface ICommonOptions {
 	release: boolean;
 	count: number;
 	hooks: boolean;
+	debug: boolean;
 }
 
 interface IYargArgv extends IDictionary<any> {

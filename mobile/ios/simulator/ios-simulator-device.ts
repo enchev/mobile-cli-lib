@@ -3,7 +3,7 @@
 
 import * as applicationManagerPath from "./ios-simulator-application-manager";
 import * as fileSystemPath from "./ios-simulator-file-system";
-import * as constants from "../../constants";
+import * as constants from "../../../constants";
 
 export class IOSSimulator implements Mobile.IiOSSimulator {
 	private _applicationManager: Mobile.IDeviceApplicationManager;
