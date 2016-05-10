@@ -27,7 +27,7 @@ export class LogcatHelper implements Mobile.ILogcatHelper {
 
 			adbLogcat.on("close", (code: number) => {
 				this.mapDeviceToLoggingStarted[deviceIdentifier] = false;
-				if(code !== 0) {
+				if(code) {
 					this.$logger.trace("ADB process exited with code " + code.toString());
 				}
 			});

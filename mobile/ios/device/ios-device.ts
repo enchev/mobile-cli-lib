@@ -25,7 +25,7 @@ export class IOSDevice implements Mobile.IiOSDevice {
 	public fileSystem: Mobile.IDeviceFileSystem;
 	public deviceInfo: Mobile.IDeviceInfo;
 
-	constructor(private devicePointer: NodeBuffer,
+	constructor(public devicePointer: NodeBuffer,
 		private $coreFoundation: Mobile.ICoreFoundation,
 		private $errors: IErrors,
 		private $fs: IFileSystem,

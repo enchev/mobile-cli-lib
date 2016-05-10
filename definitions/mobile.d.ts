@@ -237,7 +237,7 @@ declare module Mobile {
 		skipInferPlatform?: boolean;
 	}
 
-	interface IDevicesService {
+	interface IDevicesService extends NodeJS.EventEmitter {
 		hasDevices: boolean;
 		deviceCount: number;
 		execute(action: (device: Mobile.IDevice) => IFuture<void>, canExecute?: (dev: Mobile.IDevice) => boolean, options?: {allowNoDevices?: boolean}): IFuture<void>;

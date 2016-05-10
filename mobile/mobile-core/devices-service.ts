@@ -8,8 +8,12 @@ import * as assert from "assert";
 import * as constants from "../constants";
 import {exportedPromise, exported} from "../../decorators";
 import * as fiberBootstrap from "../../fiber-bootstrap";
+import * as path from "path";
+import {EventEmitter} from "events";
+import {IOSDevice} from "../ios/device/ios-device";
+import {AndroidDevice} from "../android/android-device";
 
-export class DevicesService implements Mobile.IDevicesService {
+export class DevicesService extends EventEmitter implements Mobile.IDevicesService {
 	private _devices: IDictionary<Mobile.IDevice> = {};
 	private platforms: string[] = [];
 	private static DEVICE_LOOKING_INTERVAL = 2200;
@@ -31,7 +35,9 @@ export class DevicesService implements Mobile.IDevicesService {
 		private $hostInfo: IHostInfo,
 		private $devicePlatformsConstants: Mobile.IDevicePlatformsConstants,
 		private $injector: IInjector,
-		private $options: ICommonOptions) {
+		private $options: ICommonOptions,
+		private $childProcess: IChildProcess) {
+		super();
 		this.attachToDeviceDiscoveryEvents();
 	}
 
@@ -119,13 +125,15 @@ export class DevicesService implements Mobile.IDevicesService {
 	}
 
 	private onDeviceFound(device: Mobile.IDevice): void {
-		this.$logger.trace("Found device with identifier '%s'", device.deviceInfo.identifier);
+		this.$logger.trace("Found device with identifier '%s', process.pid = %s", device.deviceInfo.identifier, "" + process.pid);
 		this._devices[device.deviceInfo.identifier] = device;
+		this.emit("deviceFound", device);
 	}
 
 	private onDeviceLost(device: Mobile.IDevice): void {
-		this.$logger.trace("Lost device with identifier '%s'", device.deviceInfo.identifier);
+		this.$logger.trace("Lost device with identifier '%s', process.pid = %s", device.deviceInfo.identifier, ""+process.pid);
 		delete this._devices[device.deviceInfo.identifier];
+		this.emit("deviceLost", device);
 	}
 
 	private detectCurrentlyAttachedDevices(): IFuture<void> {
@@ -148,13 +156,13 @@ export class DevicesService implements Mobile.IDevicesService {
 		} else {
 			this.deviceDetectionInterval = setInterval(() => {
 				fiberBootstrap.run(() => {
-					try {
-						// This code could be faster, by using Future.wait([...]), but it turned out this is breaking iOS deployment on Mac
-						// It's causing error 21 when deploying on some iOS devices during transfer of the first package.
-						this.$iOSDeviceDiscovery.checkForDevices().wait();
-					} catch (err) {
-						this.$logger.trace("Error while checking for new iOS devices.", err);
-					}
+					// try {
+					// 	// This code could be faster, by using Future.wait([...]), but it turned out this is breaking iOS deployment on Mac
+					// 	// It's causing error 21 when deploying on some iOS devices during transfer of the first package.
+					// 	this.$iOSDeviceDiscovery.checkForDevices().wait();
+					// } catch (err) {
+					// 	this.$logger.trace("Error while checking for new iOS devices.", err);
+					// }
 
 					try {
 						this.$androidDeviceDiscovery.checkForDevices().wait();
@@ -162,13 +170,13 @@ export class DevicesService implements Mobile.IDevicesService {
 						this.$logger.trace("Error while checking for new Android devices.", err);
 					}
 
-					try {
-						if (this.$hostInfo.isDarwin) {
-							this.$iOSSimulatorDiscovery.checkForDevices().wait();
-						}
-					} catch (err) {
-						this.$logger.trace("Error while checking for new iOS Simulators.", err);
-					}
+					// try {
+					// 	if (this.$hostInfo.isDarwin) {
+					// 		this.$iOSSimulatorDiscovery.checkForDevices().wait();
+					// 	}
+					// } catch (err) {
+					// 	this.$logger.trace("Error while checking for new iOS Simulators.", err);
+					// }
 
 					_.each(this._devices, device => {
 						try {
@@ -196,7 +204,44 @@ export class DevicesService implements Mobile.IDevicesService {
 			this.$logger.trace("startLookingForDevices; platform is %s", this._platform);
 			if(!this._platform) {
 				this.detectCurrentlyAttachedDevices().wait();
-				this.startDeviceDetectionInterval();
+				console.log("STARTING DEVICE DETECTION INTERVAL");
+				let deviceDetection = this.$childProcess.fork(path.join(__dirname, "device-detection-process.js"),
+												[this.$staticConfig.PATH_TO_BOOTSTRAP],
+												{silent: false});
+				deviceDetection.on("message", (data: any) => {
+					console.log("################# MSG received")
+					fiberBootstrap.run(() => {
+						console.log("MESSAGE RECEIVED");
+						if(data.deviceFound) {
+							console.log("----- dev found = ", data);
+							let device = this.getDeviceByIdentifier(data.deviceFound.identifier);
+							if(!device) {
+								let platform = data.deviceFound.platform;
+								if(platform.toLowerCase() === "ios") {
+									let device = this.$injector.resolve(IOSDevice, {devicePointer: data.deviceFound});
+									this.onDeviceFound(device);
+								} else if (platform.toLowerCase() === "android") {
+									let device = this.$injector.resolve(AndroidDevice, {status: data.status, identifier: data.identifier});
+									this.onDeviceFound(device);
+								}
+							}
+						}
+
+						if(data.deviceLost) {
+							console.log("======= device lost, ", data);
+							let device = this.getDeviceByIdentifier(data.deviceLost);
+							if(device) {
+								console.log("DEVICE LOST IN MAIN PROCESS: ", data.deviceLost);
+								// this.onDeviceLost(data.deviceList);
+							}
+						}
+					});
+				});
+
+				deviceDetection.on("error", (err: Error) => console.log("!!!!!! Errr", err));
+				deviceDetection.on("close", (code: any) => console.log("!!!! CLOSE ", code));
+				deviceDetection.on("exit", (code: any) => console.log("!!!! exit ", code));
+
 			} else if(this.$mobileHelper.isiOSPlatform(this._platform)) {
 				this.$iOSDeviceDiscovery.startLookingForDevices().wait();
 				if (this.$hostInfo.isDarwin) {
@@ -224,6 +269,7 @@ export class DevicesService implements Mobile.IDevicesService {
 	private getDeviceByIdentifier(identifier: string): Mobile.IDevice {
 		let searchedDevice = _.find(this.getDeviceInstances(), (device: Mobile.IDevice) => { return device.deviceInfo.identifier === identifier; });
 		if(!searchedDevice) {
+			// TODO: add client_name for Proton
 			this.$errors.fail(this.$messages.Devices.NotFoundDeviceByIdentifierErrorMessageWithIdentifier, identifier, this.$staticConfig.CLIENT_NAME.toLowerCase());
 		}
 
@@ -232,7 +278,7 @@ export class DevicesService implements Mobile.IDevicesService {
 
 	private getDevice(deviceOption: string): IFuture<Mobile.IDevice> {
 		return (() => {
-			this.startLookingForDevices().wait();
+			this.detectCurrentlyAttachedDevices().wait();
 			let device: Mobile.IDevice = null;
 
 			if(this.hasDevice(deviceOption)) {

@@ -26,34 +26,15 @@ class DeviceEmitter extends EventEmitter {
 
 	public initialize(): IFuture<void> {
 		return (() => {
-			this.$androidDeviceDiscovery.ensureAdbServerStarted().wait();
-			this.$androidDeviceDiscovery.on("deviceFound", (device: Mobile.IDevice) => {
+			this.$devicesService.on("deviceFound", (device: Mobile.IDevice) => {
+				console.log("device emitter, device is found raised PID = ", process.pid);
 				this.emit("deviceFound", device.deviceInfo);
 				this.attachApplicationChangedHandlers(device);
 				device.openDeviceLogStream();
 			});
 
-			this.$androidDeviceDiscovery.on("deviceLost", (device: Mobile.IDevice) => {
-				this.emit("deviceLost", device.deviceInfo);
-			});
-
-			this.$iOSDeviceDiscovery.on("deviceFound", (device: Mobile.IDevice) => {
-				this.emit("deviceFound", device.deviceInfo);
-				this.attachApplicationChangedHandlers(device);
-				device.openDeviceLogStream();
-			});
-
-			this.$iOSDeviceDiscovery.on("deviceLost", (device: Mobile.IDevice) => {
-				this.emit("deviceLost", device.deviceInfo);
-			});
-
-			this.$iOSSimulatorDiscovery.on("deviceFound", (device: Mobile.IDevice) => {
-				this.emit("deviceFound", device.deviceInfo);
-				device.openDeviceLogStream();
-				this.attachApplicationChangedHandlers(device);
-			});
-
-			this.$iOSSimulatorDiscovery.on("deviceLost", (device: Mobile.IDevice) => {
+			this.$devicesService.on("deviceLost", (device: Mobile.IDevice) => {
+				console.log("device emitter, device is lost raised PID = ", process.pid);
 				this.emit("deviceLost", device.deviceInfo);
 			});
 
