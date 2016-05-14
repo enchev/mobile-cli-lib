@@ -494,7 +494,7 @@ interface ILiveSyncServiceBase {
 	 * @param {any} liveSyncOptions Defines if the LiveSync operation is for Companion app.
 	 * @return {Function} Function that returns IFuture<void>.
 	 */
-	getSyncAction(data: ILiveSyncData, filesToSync?: string[], deviceFilesAction?: (device: Mobile.IDevice, localToDevicePaths: Mobile.ILocalToDevicePathData[]) => IFuture<void>, liveSyncOptions?: { isForCompanionApp: boolean }): (device: Mobile.IDevice) => IFuture<void>;
+	getSyncAction(data: ILiveSyncData, filesToSync: string[], deviceFilesAction: (device: Mobile.IDevice, localToDevicePaths: Mobile.ILocalToDevicePathData[]) => IFuture<void>, liveSyncOptions: { isForCompanionApp: boolean, additionalConfigurations?: string[] }): (device: Mobile.IDevice) => IFuture<void>;
 }
 
 interface ISyncBatch {
@@ -519,6 +519,8 @@ interface ILiveSyncData {
 	syncWorkingDirectory: string;
 	canExecuteFastSync?: boolean;
 	forceExecuteFullSync?: boolean;
+	/** Additional configurations for which to get the information. The basic configurations are `debug` and `release`. */
+	additionalConfigurations?: string[];
 	excludedProjectDirsAndFiles?: string[];
 	/**
 	 * Describes if the livesync action can be executed on specified device.
@@ -1003,7 +1005,7 @@ interface IProjectFilesManager {
 	 * Returns an object that maps every local file path to device file path
 	 * If projectFiles parameter is not specified enumerates the files from the specified projectFilesPath
 	 */
-	createLocalToDevicePaths(deviceAppData: Mobile.IDeviceAppData, projectFilesPath: string, files?: string[], excludedProjectDirsAndFiles?: string[]): Mobile.ILocalToDevicePathData[];
+	createLocalToDevicePaths(deviceAppData: Mobile.IDeviceAppData, projectFilesPath: string, files: string[], excludedProjectDirsAndFiles: string[], additionalConfigurations?: string[]): Mobile.ILocalToDevicePathData[];
 	/**
 	 * Handle platform specific files
 	 */
@@ -1023,10 +1025,11 @@ interface IProjectFilesProvider {
 	/**
 	 * Returns information about file in the project, that includes file's name on device after removing platform or configuration from the name.
 	 * @param {string} filePath Path to the project file.
-	 * @param {string} optional Platform for which to get the information.
+	 * @param  {string} platform platform for which to get the information.
+	 * @param  {string[]} additionalConfigurations optional additional configurations for which to get the information. The basic configurations are `debug` and `release`.
 	 * @return {IProjectFileInfo}
 	 */
-	getProjectFileInfo(filePath: string, platform?: string): IProjectFileInfo;
+	getProjectFileInfo(filePath: string, platform: string, additionalConfigurations?: string[]): IProjectFileInfo;
 	/**
 	 * Parses file by removing platform or configuration from its name.
 	 * @param {string} filePath Path to the project file.

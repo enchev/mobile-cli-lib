@@ -17,8 +17,13 @@ export class AndroidDeviceFileSystem implements Mobile.IDeviceFileSystem {
 		private $injector: IInjector,
 		private $options: ICommonOptions) { }
 
-	public listFiles(devicePath: string): IFuture<void> {
-		return Future.fromResult();
+	public listFiles(devicePath: string, appIdentifier?: string): IFuture<any> {
+		let listCommandArgs = ["ls", "-al", devicePath];
+		if (appIdentifier) {
+			listCommandArgs = ["run-as", appIdentifier].concat(listCommandArgs);
+		}
+
+		return this.adb.executeShellCommand(listCommandArgs);
 	}
 
 	public getFile(deviceFilePath: string): IFuture<void> {

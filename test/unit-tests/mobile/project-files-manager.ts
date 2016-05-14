@@ -128,7 +128,7 @@ describe("Project Files Manager Tests", () => {
 	it("maps non-platform specific files to device file paths for ios platform", () => {
 		let deviceAppData = deviceAppDataFactory.create(testedApplicationIdentifier, "iOS", null);
 		let files = ["~/TestApp/app/test.js", "~/TestApp/app/myfile.js"];
-		let localToDevicePaths = projectFilesManager.createLocalToDevicePaths(deviceAppData, "~/TestApp/app", files);
+		let localToDevicePaths = projectFilesManager.createLocalToDevicePaths(deviceAppData, "~/TestApp/app", files, []);
 
 		_.each(localToDevicePaths, (localToDevicePathData, index) => {
 			assert.equal(files[index],  localToDevicePathData.getLocalPath());
@@ -140,7 +140,7 @@ describe("Project Files Manager Tests", () => {
 	it("maps non-platform specific files to device file paths for android platform", () => {
 		let deviceAppData = deviceAppDataFactory.create(testedApplicationIdentifier, "Android", null);
 		let files = ["~/TestApp/app/test.js", "~/TestApp/app/myfile.js"];
-		let localToDevicePaths = projectFilesManager.createLocalToDevicePaths(deviceAppData, "~/TestApp/app", files);
+		let localToDevicePaths = projectFilesManager.createLocalToDevicePaths(deviceAppData, "~/TestApp/app", files, []);
 
 		_.each(localToDevicePaths, (localToDevicePathData, index) => {
 			assert.equal(files[index], localToDevicePathData.getLocalPath());
@@ -152,7 +152,7 @@ describe("Project Files Manager Tests", () => {
 	it("maps ios platform specific file to device file path", () => {
 		let deviceAppData = deviceAppDataFactory.create(testedApplicationIdentifier, "iOS", null);
 		let filePath = "~/TestApp/app/test.ios.js";
-		let localToDevicePathData = projectFilesManager.createLocalToDevicePaths(deviceAppData, "~/TestApp/app", [filePath])[0];
+		let localToDevicePathData = projectFilesManager.createLocalToDevicePaths(deviceAppData, "~/TestApp/app", [filePath], [])[0];
 
 		assert.equal(filePath, localToDevicePathData.getLocalPath());
 		assert.equal(mobileHelper.buildDevicePath(iOSDeviceProjectRootPath, "test.js"), localToDevicePathData.getDevicePath());
@@ -162,7 +162,7 @@ describe("Project Files Manager Tests", () => {
 	it("maps android platform specific file to device file path", () => {
 		let deviceAppData = deviceAppDataFactory.create(testedApplicationIdentifier, "Android", null);
 		let filePath = "~/TestApp/app/test.android.js";
-		let localToDevicePathData = projectFilesManager.createLocalToDevicePaths(deviceAppData, "~/TestApp/app", [filePath])[0];
+		let localToDevicePathData = projectFilesManager.createLocalToDevicePaths(deviceAppData, "~/TestApp/app", [filePath], [])[0];
 
 		assert.equal(filePath, localToDevicePathData.getLocalPath());
 		assert.equal(mobileHelper.buildDevicePath(androidDeviceProjectRootPath, "test.js"), localToDevicePathData.getDevicePath());

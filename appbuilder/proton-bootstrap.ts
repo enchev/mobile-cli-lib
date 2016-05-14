@@ -1,6 +1,7 @@
 ///<reference path="../.d.ts"/>
 "use strict";
 
+debugger;
 require("./appbuilder-bootstrap");
 $injector.require("messages", "./messages/messages");
 
@@ -37,4 +38,4 @@ $injector.register("deployHelper", {
 
 $injector.require("liveSyncProvider", "./appbuilder/providers/livesync-provider");
 $injector.requirePublic("liveSyncService", "./appbuilder/services/livesync/livesync-service");
-$injector.require("project", "./appbuilder/project/project-base");
+$injector.require("project", "./appbuilder/project/project");

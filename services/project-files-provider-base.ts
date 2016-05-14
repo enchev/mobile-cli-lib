@@ -3,6 +3,7 @@
 
 import * as path from "path";
 import * as util from "util";
+import {Configurations} from "../constants";
 
 export abstract class ProjectFilesProviderBase implements IProjectFilesProvider {
 	abstract isFileExcluded(filePath: string): boolean;
@@ -12,14 +13,15 @@ export abstract class ProjectFilesProviderBase implements IProjectFilesProvider 
 		protected $options: ICommonOptions) {}
 
 	public getPreparedFilePath(filePath: string): string {
-		let projectFileInfo = this.getProjectFileInfo(filePath);
+		let projectFileInfo = this.getProjectFileInfo(filePath, "");
 		return path.join(path.dirname(filePath), projectFileInfo.onDeviceFileName);
 	}
 
-	public getProjectFileInfo(filePath: string, platform?: string): IProjectFileInfo {
+	public getProjectFileInfo(filePath: string, platform: string, additionalConfigurations?: string[]): IProjectFileInfo {
 		let parsed = this.parseFile(filePath, this.$mobileHelper.platformNames, platform || "");
+		let basicConfigurations = [Configurations.Debug.toLowerCase(), Configurations.Release.toLowerCase()];
 		if (!parsed) {
-			parsed = this.parseFile(filePath, ["debug", "release"], this.$options.release ? "release" : "debug");
+			parsed = this.parseFile(filePath, basicConfigurations.concat(additionalConfigurations || []), (this.$options.config && this.$options.config[0]) || basicConfigurations[0]);
 		}
 
 		return parsed || {

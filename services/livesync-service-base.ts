@@ -162,7 +162,7 @@ class LiveSyncServiceBase implements ILiveSyncServiceBase {
 		}).future<void>()();
 	}
 
-	public getSyncAction(data: ILiveSyncData, filesToSync?: string[], deviceFilesAction?: (device: Mobile.IDevice, localToDevicePaths: Mobile.ILocalToDevicePathData[]) => IFuture<void>, liveSyncOptions?: { isForCompanionApp: boolean }): (device: Mobile.IDevice) => IFuture<void> {
+	public getSyncAction(data: ILiveSyncData, filesToSync: string[], deviceFilesAction: (device: Mobile.IDevice, localToDevicePaths: Mobile.ILocalToDevicePathData[]) => IFuture<void>, liveSyncOptions: { isForCompanionApp: boolean, additionalConfigurations?: string[] }): (device: Mobile.IDevice) => IFuture<void> {
 		let appIdentifier = data.appIdentifier;
 		let platform = data.platform;
 		let projectFilesPath = data.projectFilesPath;
@@ -192,7 +192,7 @@ class LiveSyncServiceBase implements ILiveSyncServiceBase {
 						}
 
 						if (platformLiveSyncService.afterInstallApplicationAction) {
-							let localToDevicePaths = this.$projectFilesManager.createLocalToDevicePaths(deviceAppData, projectFilesPath, filesToSync, data.excludedProjectDirsAndFiles);
+							let localToDevicePaths = this.$projectFilesManager.createLocalToDevicePaths(deviceAppData, projectFilesPath, filesToSync, data.excludedProjectDirsAndFiles, liveSyncOptions.additionalConfigurations);
 							platformLiveSyncService.afterInstallApplicationAction(deviceAppData, localToDevicePaths).wait();
 						}
 						shouldRefreshApplication = false;
@@ -201,7 +201,7 @@ class LiveSyncServiceBase implements ILiveSyncServiceBase {
 					// Restart application or reload page
 					if (shouldRefreshApplication) {
 						// Transfer or remove files on device
-						let localToDevicePaths = this.$projectFilesManager.createLocalToDevicePaths(deviceAppData, projectFilesPath, filesToSync, data.excludedProjectDirsAndFiles);
+						let localToDevicePaths = this.$projectFilesManager.createLocalToDevicePaths(deviceAppData, projectFilesPath, filesToSync, data.excludedProjectDirsAndFiles, liveSyncOptions.additionalConfigurations);
 						if (deviceFilesAction) {
 							deviceFilesAction(device, localToDevicePaths).wait();
 						} else {
@@ -221,13 +221,13 @@ class LiveSyncServiceBase implements ILiveSyncServiceBase {
 		return action;
 	}
 
-	private syncCore(data: ILiveSyncData, filesToSync?: string[], deviceFilesAction?: (device: Mobile.IDevice, localToDevicePaths: Mobile.ILocalToDevicePathData[]) => IFuture<void>): IFuture<void> {
+	private syncCore(data: ILiveSyncData, filesToSync: string[], deviceFilesAction?: (device: Mobile.IDevice, localToDevicePaths: Mobile.ILocalToDevicePathData[]) => IFuture<void>): IFuture<void> {
 		return (() => {
 			let appIdentifier = data.appIdentifier;
 			let platform = data.platform;
 
 			let canExecute = this.getCanExecuteAction(platform, appIdentifier, data.canExecute);
-			let action = this.getSyncAction(data, filesToSync, deviceFilesAction);
+			let action = this.getSyncAction(data, filesToSync, deviceFilesAction, { isForCompanionApp: this.$options.companion, additionalConfigurations: data.additionalConfigurations });
 
 			this.$devicesService.execute(action, canExecute).wait();
 		}).future<void>()();

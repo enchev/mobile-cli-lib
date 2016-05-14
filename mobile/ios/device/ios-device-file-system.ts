@@ -17,7 +17,7 @@ export class IOSDeviceFileSystem implements Mobile.IDeviceFileSystem {
 		private $mobileDevice: Mobile.IMobileDevice,
 		private $options: ICommonOptions) { }
 
-	public listFiles(devicePath: string): IFuture<void> {
+	public listFiles(devicePath: string, appIdentifier?: string): IFuture<any> {
 		return (() => {
 			if (!devicePath) {
 				devicePath = ".";
@@ -42,7 +42,7 @@ export class IOSDeviceFileSystem implements Mobile.IDeviceFileSystem {
 			};
 
 			walk(devicePath, 0);
-		}).future<void>()();
+		}).future<any>()();
 	}
 
 	public getFile(deviceFilePath: string): IFuture<void> {

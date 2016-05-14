@@ -86,7 +86,43 @@ declare module Project {
 		projectDir: string;
 		getProjectDir(): IFuture<string>;
 		projectData: IData;
+		/**
+		 * Describes whether the project has separate debug/release build configurations.
+		 * @type {boolean}
+		 */
+		hasBuildConfigurations: boolean;
 		capabilities: ICapabilities;
+		/**
+		 * Information about the current project.
+		 * @type {Project.IProjectInformation}
+		 */
+		projectInformation: Project.IProjectInformation;
+	}
+
+	/**
+	 * Describes information gathered about the current project.
+	 */
+	interface IProjectInformation {
+		/**
+		 * The data parsed from the project's configuration file
+		 * @type {Project.IData}
+		 */
+		projectData: Project.IData;
+		/**
+		 * Data parsed from the project's configuration specific configuration files(e.g. .debug.abproject, .test.abproject, etc.).
+		 * @type {IDictionary<any>}
+		 */
+		configurationSpecificData: IDictionary<any>;
+		/**
+		 * Whether or not the project has separate debug/release build configurations.
+		 * @type {boolean}
+		 */
+		hasBuildConfigurations: boolean;
+		/**
+		 * The project's configurations - usually only debug and release, but the user may specify more by creating multiple custom configuration files.
+		 * @type {string[]}
+		 */
+		configurations: string[];
 	}
 }
 
