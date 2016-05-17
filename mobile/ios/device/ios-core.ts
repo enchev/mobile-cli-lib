@@ -867,21 +867,23 @@ class PosixSocket implements Mobile.IiOSDeviceSocket {
     private state: ReadState = ReadState.Length;
     private length: number = 4;
 
-	constructor(service: number,
+	constructor(private service: number,
 		private format: number,
 		private $coreFoundation: Mobile.ICoreFoundation,
 		private $mobileDevice: Mobile.IMobileDevice,
 		private $logger: ILogger,
 		private $errors: IErrors) {
-		this.socket = new net.Socket({ fd: service });
+this.socket = new net.Socket({ fd: service });
 	}
 
 	public receiveMessage(): IFuture<Mobile.IiOSSocketResponseData|Mobile.IiOSSocketResponseData[]> {
 		let result = new Future<Mobile.IiOSSocketResponseData>();
 		let messages: Mobile.IiOSSocketResponseData[] = [];
-
+		this.buffer = new Buffer(0);
+		//this.socket = new net.Socket({ fd: this.service });
 		this.socket
 			.on("data", (data: NodeBuffer) => {
+				console.log("IN receiveMessage this.buffer.length = ", this.buffer.length, " data.length = ", data.length);
 				this.buffer = Buffer.concat([this.buffer, data]);
 				if (this.format === CoreTypes.kCFPropertyListBinaryFormat_v1_0) {
 					try {
@@ -978,18 +980,18 @@ class PosixSocket implements Mobile.IiOSDeviceSocket {
 	}
 
 	public readSystemLog(action: (_data: string) => void) {
-		this.socket
-			.on("data", (data: NodeBuffer) => {
-				let output = ref.readCString(data, 0);
-				action(output);
-			})
-			.on("end", () => {
-				this.close();
-				this.$errors.verifyHeap("readSystemLog");
-			})
-			.on("error", (error: Error) => {
-				this.$errors.fail(error);
-			});
+		// this.socket
+		// 	.on("data", (data: NodeBuffer) => {
+		// 		let output = ref.readCString(data, 0);
+		// 		action(output);
+		// 	})
+		// 	.on("end", () => {
+		// 		this.close();
+		// 		this.$errors.verifyHeap("readSystemLog");
+		// 	})
+		// 	.on("error", (error: Error) => {
+		// 		this.$errors.fail(error);
+		// 	});
 	}
 
 	public sendMessage(message: any, format?: number): void {

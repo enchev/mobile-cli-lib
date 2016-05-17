@@ -32,6 +32,7 @@ export abstract class ApplicationManagerBase extends EventEmitter implements Mob
 			// As this method is called on 500ms, but it's execution may last much longer
 			// use locking, so the next executions will not get into the body, while the first one is still working.
 			// In case we do not break the next executions, we'll report each app as newly installed several times.
+			console.log("ApplicationManagerBase checkForApplicationUpdates, isChecking = ", this.isChecking);
 			if(!this.isChecking) {
 				try {
 					this.isChecking = true;
