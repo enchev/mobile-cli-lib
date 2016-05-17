@@ -163,48 +163,53 @@ export class AfcClient implements Mobile.IAfcClient {
 	public transfer(localFilePath: string, devicePath: string): IFuture<void> {
 		return(() => {
 			let future = new Future<void>();
-			this.ensureDevicePathExist(path.dirname(devicePath));
-			let reader = this.$fs.createReadStream(localFilePath);
-			devicePath = helpers.fromWindowsRelativePathToUnix(devicePath);
+			try {
+				this.ensureDevicePathExist(path.dirname(devicePath));
+				let reader = this.$fs.createReadStream(localFilePath);
+				devicePath = helpers.fromWindowsRelativePathToUnix(devicePath);
 
-			this.deleteFile(devicePath);
+				this.deleteFile(devicePath);
 
-			let target = this.open(devicePath, "w");
- 			let localFilePathSize = this.$fs.getFileSize(localFilePath).wait(),
- 				futureThrow = (err: Error) => {
-					if (!future.isResolved()) {
-						future.throw(err);
+				let target = this.open(devicePath, "w");
+				let localFilePathSize = this.$fs.getFileSize(localFilePath).wait(),
+					futureThrow = (err: Error) => {
+						if (!future.isResolved()) {
+							future.throw(err);
+						}
+					};
+
+				reader.on("data", (data: NodeBuffer) => {
+					try {
+						target.write(data, data.length);
+						this.$logger.trace("transfer-> localFilePath: '%s', devicePath: '%s', localFilePathSize: '%s', transferred bytes: '%s'",
+							localFilePath, devicePath, localFilePathSize.toString(), data.length.toString());
+					} catch(err) {
+						if(err.message.indexOf("Result is: '21'") !== -1) {
+							// Error code 21 is kAFCInterruptedError. It looks like in most cases it is raised during package transfer.
+							// However ignoring this error, does not prevent the application from installing and working correctly.
+							this.$logger.warn(err.message);
+						} else {
+							futureThrow(err);
+						}
 					}
-				};
+				});
 
-			reader.on("data", (data: NodeBuffer) => {
-				try {
-					target.write(data, data.length);
-					this.$logger.trace("transfer-> localFilePath: '%s', devicePath: '%s', localFilePathSize: '%s', transferred bytes: '%s'",
-						localFilePath, devicePath, localFilePathSize.toString(), data.length.toString());
-				} catch(err) {
-					if(err.message.indexOf("Result is: '21'") !== -1) {
-						// Error code 21 is kAFCInterruptedError. It looks like in most cases it is raised during package transfer.
-						// However ignoring this error, does not prevent the application from installing and working correctly.
-						this.$logger.warn(err.message);
-					} else {
-						futureThrow(err);
+				reader.on("error", (error: Error) => {
+					futureThrow(error);
+				});
+
+				reader.on("end", () => target.close());
+
+				reader.on("close", () => {
+					if(!future.isResolved()) {
+						future.return();
 					}
+				});
+			} catch(err) {
+				if (!future.isResolved()) {
+					future.throw(err);
 				}
-			});
-
-			reader.on("error", (error: Error) => {
-				futureThrow(error);
-			});
-
-			reader.on("end", () => target.close());
-
-			reader.on("close", () => {
-				if(!future.isResolved()) {
-					future.return();
-				}
-			});
-
+			}
 			future.wait();
 		}).future<void>()();
 	}
