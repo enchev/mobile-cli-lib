@@ -266,7 +266,11 @@ export class InstallationProxyClient {
 	}
 
 	public closeSocket() {
-		return this.plistService.close();
+		if (this.plistService) {
+			return this.plistService.close();
+		} else if (this.plistInstallationService) {
+			this.plistInstallationService.close();
+		}
 	}
 }
 $injector.register("installationProxyClient", InstallationProxyClient);
