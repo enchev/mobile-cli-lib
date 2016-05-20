@@ -993,8 +993,13 @@ class PosixSocket implements Mobile.IiOSDeviceSocket {
 	}
 
 	public sendMessage(message: any, format?: number): void {
+		let future = new Future<void>();
 		if(typeof(message) === "string") {
-			this.socket.write(message);
+			this.socket.write(message, undefined, () => {
+				future.return();
+				console.log("SOCKET WRITE FINISHED!!!");
+			});
+			future.wait();
 		} else {
 			let data = this.$coreFoundation.dictToPlistEncoding(message, format);
 			let payload = bufferpack.pack(">i", [data.length]);
@@ -1002,8 +1007,18 @@ class PosixSocket implements Mobile.IiOSDeviceSocket {
 			this.$logger.trace("PlistService sending: ");
 			this.$logger.trace(data.toString());
 
-			this.socket.write(payload);
-			this.socket.write(data);
+			this.socket.write(payload, undefined, () => {
+				future.return();
+				console.log("SOCKET 1 write finished");
+			});
+			future.wait();
+			let future2 = new Future<void>();
+			this.socket.write(data, undefined, () => {
+				future2.return();
+				console.log("SOCKET 2 write finished");
+
+			});
+			future2.wait();
 		}
 
 		this.$errors.verifyHeap("sendMessage");

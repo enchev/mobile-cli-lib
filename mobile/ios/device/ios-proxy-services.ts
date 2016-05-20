@@ -111,7 +111,7 @@ export class AfcClient implements Mobile.IAfcClient {
 	public mkdir(path: string) {
 		let result = this.$mobileDevice.afcDirectoryCreate(this.afcConnection, path);
 		if (result !== 0) {
-			this.$errors.fail("Unable to make directory: %s. Result is %s", path, result);
+			//this.$errors.fail("Unable to make directory: %s. Result is %s", path, result);
 		}
 	}
 

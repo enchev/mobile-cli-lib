@@ -16,10 +16,10 @@ export class DeviceLogProvider extends EventEmitter implements Mobile.IDeviceLog
 			logLevel = this.devicesLogLevel[deviceIdentifier] = this.devicesLogLevel[deviceIdentifier] || this.$logFilter.loggingLevel;
 		}
 
-		let data = this.$logFilter.filterData(platform, line, logLevel);
-		if(data) {
-			this.emit('data', deviceIdentifier, data);
-		}
+		// let data = this.$logFilter.filterData(platform, line, logLevel);
+		//if(data) {
+			this.emit('data', deviceIdentifier, line.toString());
+		//}
 	}
 
 	public setLogLevel(logLevel: string, deviceIdentifier?: string): void {
