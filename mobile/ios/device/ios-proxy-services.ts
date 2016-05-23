@@ -25,7 +25,8 @@ export class AfcFile implements Mobile.IAfcFile {
 		mode: string,
 		private afcConnection: NodeBuffer,
 		private $mobileDevice: Mobile.IMobileDevice,
-		private $errors: IErrors) {
+		private $errors: IErrors,
+		private $logger: ILogger) {
 		let modeValue = 0;
 		if (mode.indexOf("r") > -1) {
 			modeValue = 0x1;
@@ -35,8 +36,15 @@ export class AfcFile implements Mobile.IAfcFile {
 		}
 		let afcFileRef = ref.alloc(ref.types.uint64);
 		this.open = false;
+		let result: number;
 
-		let result = this.$mobileDevice.afcFileRefOpen(this.afcConnection, path, modeValue, afcFileRef);
+		for (let currentTry = 0; currentTry < 5 && result !== 0; currentTry++) {
+			try {
+				result = this.$mobileDevice.afcFileRefOpen(this.afcConnection, path, modeValue, afcFileRef);
+			} catch (err) {
+				this.$logger.trace(`Error #${currentTry} while trying to open file '${path}'. Error is: `, err);
+			}
+		}
 		if (result !== 0) {
 			this.$errors.fail("Unable to open file reference: '%s' with path '%s", result, path);
 		}
@@ -62,7 +70,15 @@ export class AfcFile implements Mobile.IAfcFile {
 	}
 
 	public write(buffer: any, byteLength?: any): boolean {
-		let result = this.$mobileDevice.afcFileRefWrite(this.afcConnection, this.afcFile, buffer, byteLength);
+		let result: number;
+		for (let currentTry = 0; currentTry < 5 && result !== 0; currentTry++) {
+			try {
+				result = this.$mobileDevice.afcFileRefWrite(this.afcConnection, this.afcFile, buffer, byteLength);
+			} catch (err) {
+				this.$logger.trace(`Error #${currentTry} while trying to write to file '${this.afcFile}'. Error is: `, err);
+			}
+		}
+
 		if (result !== 0) {
 			this.$errors.fail("Unable to write to file: '%s'. Result is: '%s'", this.afcFile, result);
 		}
