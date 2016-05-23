@@ -87,6 +87,7 @@ export class AfcFile implements Mobile.IAfcFile {
 
 export class AfcClient implements Mobile.IAfcClient {
 	private afcConnection: NodeBuffer = null;
+	private static MKDIR_NUMBER_OF_RETRIES = 5;
 
 	constructor(private service: number,
 		private $mobileDevice: Mobile.IMobileDevice,
@@ -109,9 +110,18 @@ export class AfcClient implements Mobile.IAfcClient {
 	}
 
 	public mkdir(path: string) {
-		let result = this.$mobileDevice.afcDirectoryCreate(this.afcConnection, path);
+		let result: number;
+
+		for (let currentTry = 0; currentTry < AfcClient.MKDIR_NUMBER_OF_RETRIES && result !== 0; currentTry++) {
+			try {
+				result = this.$mobileDevice.afcDirectoryCreate(this.afcConnection, path);
+			} catch (err) {
+				this.$logger.trace(`Error #${currentTry} while trying to make dir '${path}'. Error is: `, err);
+			}
+		}
+
 		if (result !== 0) {
-			this.$errors.fail("Unable to make directory: %s. Result is %s", path, result);
+			this.$logger.warn(`Unable to make directory: ${path}. Result is ${result}.`);
 		}
 	}
 
@@ -163,48 +173,54 @@ export class AfcClient implements Mobile.IAfcClient {
 	public transfer(localFilePath: string, devicePath: string): IFuture<void> {
 		return(() => {
 			let future = new Future<void>();
-			this.ensureDevicePathExist(path.dirname(devicePath));
-			let reader = this.$fs.createReadStream(localFilePath);
-			devicePath = helpers.fromWindowsRelativePathToUnix(devicePath);
+			try {
+				this.ensureDevicePathExist(path.dirname(devicePath));
+				let reader = this.$fs.createReadStream(localFilePath);
+				devicePath = helpers.fromWindowsRelativePathToUnix(devicePath);
 
-			this.deleteFile(devicePath);
+				this.deleteFile(devicePath);
 
-			let target = this.open(devicePath, "w");
- 			let localFilePathSize = this.$fs.getFileSize(localFilePath).wait(),
- 				futureThrow = (err: Error) => {
-					if (!future.isResolved()) {
-						future.throw(err);
+				let target = this.open(devicePath, "w");
+				let localFilePathSize = this.$fs.getFileSize(localFilePath).wait(),
+					futureThrow = (err: Error) => {
+						if (!future.isResolved()) {
+							future.throw(err);
+						}
+					};
+
+				reader.on("data", (data: NodeBuffer) => {
+					try {
+						target.write(data, data.length);
+						this.$logger.trace("transfer-> localFilePath: '%s', devicePath: '%s', localFilePathSize: '%s', transferred bytes: '%s'",
+							localFilePath, devicePath, localFilePathSize.toString(), data.length.toString());
+					} catch(err) {
+						if(err.message.indexOf("Result is: '21'") !== -1) {
+							// Error code 21 is kAFCInterruptedError. It looks like in most cases it is raised during package transfer.
+							// However ignoring this error, does not prevent the application from installing and working correctly.
+							this.$logger.warn(err.message);
+						} else {
+							futureThrow(err);
+						}
 					}
-				};
+				});
 
-			reader.on("data", (data: NodeBuffer) => {
-				try {
-					target.write(data, data.length);
-					this.$logger.trace("transfer-> localFilePath: '%s', devicePath: '%s', localFilePathSize: '%s', transferred bytes: '%s'",
-						localFilePath, devicePath, localFilePathSize.toString(), data.length.toString());
-				} catch(err) {
-					if(err.message.indexOf("Result is: '21'") !== -1) {
-						// Error code 21 is kAFCInterruptedError. It looks like in most cases it is raised during package transfer.
-						// However ignoring this error, does not prevent the application from installing and working correctly.
-						this.$logger.warn(err.message);
-					} else {
-						futureThrow(err);
+				reader.on("error", (error: Error) => {
+					futureThrow(error);
+				});
+
+				reader.on("end", () => target.close());
+
+				reader.on("close", () => {
+					if(!future.isResolved()) {
+						future.return();
 					}
-				}
-			});
-
-			reader.on("error", (error: Error) => {
-				futureThrow(error);
-			});
-
-			reader.on("end", () => target.close());
-
-			reader.on("close", () => {
+				});
+			} catch (err) {
+				this.$logger.trace("Error while transferring files. Error is: ", err);
 				if(!future.isResolved()) {
-					future.return();
+					future.throw(err);
 				}
-			});
-
+			}
 			future.wait();
 		}).future<void>()();
 	}
